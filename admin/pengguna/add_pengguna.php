@@ -75,7 +75,7 @@
         $sql_simpan = "INSERT INTO tb_pengguna (nama_pengguna,username,password,level) VALUES (
         '".$_POST['nama_pengguna']."',
         '".$_POST['username']."',
-        '".md5($_POST['password'])."',
+        '".password_hash($_POST['password'], PASSWORD_BCRYPT)."',
         '".$_POST['level']."')";
         $query_simpan = mysqli_query($koneksi, $sql_simpan);
     if ($query_simpan) {

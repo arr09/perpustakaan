@@ -1,10 +1,19 @@
 <?php
+if (isset($_GET['kode'])) {
+    // Sanitasi input untuk mencegah SQL Injection
+    $kode = mysqli_real_escape_string($koneksi, $_GET['kode']);
 
-    if(isset($_GET['kode'])){
-        $sql_cek = "SELECT * FROM tb_buku WHERE id_buku='".$_GET['kode']."'";
-        $query_cek = mysqli_query($koneksi, $sql_cek);
-        $data_cek = mysqli_fetch_array($query_cek,MYSQLI_BOTH);
-    }
+    // Menggunakan prepared statement untuk query SELECT
+    $sql_cek = "SELECT * FROM tb_buku WHERE id_buku = ?";
+    $stmt_cek = $koneksi->prepare($sql_cek);
+    $stmt_cek->bind_param("s", $kode); // "s" untuk parameter string
+    $stmt_cek->execute();
+    $result = $stmt_cek->get_result();
+    $data_cek = $result->fetch_array(MYSQLI_BOTH);
+
+    // Tutup statement
+    $stmt_cek->close();
+}
 ?>
 
 <section class="content-header">
@@ -28,42 +37,32 @@
 			<!-- general form elements -->
 			<div class="box box-success">
 				<div class="box-header with-border">
-					<h3 class="box-title">Ubah buku</h3>
+					<h3 class="box-title">Ubah Buku</h3>
 				</div>
 				<!-- /.box-header -->
 				<!-- form start -->
 				<form action="" method="post" enctype="multipart/form-data">
 					<div class="box-body">
-
 						<div class="form-group">
 							<label>Id Buku</label>
-							<input type='text' class="form-control" name="id_buku" value="<?php echo $data_cek['id_buku']; ?>"
-							 readonly/>
+							<input type="text" class="form-control" name="id_buku" value="<?php echo htmlspecialchars($data_cek['id_buku']); ?>" readonly />
 						</div>
-
 						<div class="form-group">
 							<label>Judul Buku</label>
-							<input type='text' class="form-control" name="judul_buku" value="<?php echo $data_cek['judul_buku']; ?>"
-							/>
+							<input type="text" class="form-control" name="judul_buku" value="<?php echo htmlspecialchars($data_cek['judul_buku']); ?>" />
 						</div>
-
 						<div class="form-group">
 							<label>Pengarang</label>
-							<input type='text' class="form-control" name="pengarang" value="<?php echo $data_cek['pengarang']; ?>"
-							/>
+							<input type="text" class="form-control" name="pengarang" value="<?php echo htmlspecialchars($data_cek['pengarang']); ?>" />
 						</div>
-
 						<div class="form-group">
 							<label>Penerbit</label>
-							<input class="form-control" name="penerbit" value="<?php echo $data_cek['penerbit']; ?>"
-							/>
+							<input type="text" class="form-control" name="penerbit" value="<?php echo htmlspecialchars($data_cek['penerbit']); ?>" />
 						</div>
-
 						<div class="form-group">
 							<label>Th Terbit</label>
-							<input class="form-control" name="th_terbit" value="<?php echo $data_cek['th_terbit']; ?>">
+							<input type="text" class="form-control" name="th_terbit" value="<?php echo htmlspecialchars($data_cek['th_terbit']); ?>" />
 						</div>
-
 					</div>
 					<!-- /.box-body -->
 
@@ -77,33 +76,50 @@
 </section>
 
 <?php
+if (isset($_POST['Ubah'])) {
+    // Validasi data dari form
+    $id_buku = mysqli_real_escape_string($koneksi, $_POST['id_buku']);
+    $judul_buku = mysqli_real_escape_string($koneksi, $_POST['judul_buku']);
+    $pengarang = mysqli_real_escape_string($koneksi, $_POST['pengarang']);
+    $penerbit = mysqli_real_escape_string($koneksi, $_POST['penerbit']);
+    $th_terbit = mysqli_real_escape_string($koneksi, $_POST['th_terbit']);
 
-if (isset ($_POST['Ubah'])){
-    //mulai proses ubah
-    $sql_ubah = "UPDATE tb_buku SET
-        judul_buku='".$_POST['judul_buku']."',
-        pengarang='".$_POST['pengarang']."',
-        penerbit='".$_POST['penerbit']."',
-        th_terbit='".$_POST['th_terbit']."'
-        WHERE id_buku='".$_POST['id_buku']."'";
-    $query_ubah = mysqli_query($koneksi, $sql_ubah);
+    // Menggunakan prepared statement untuk query UPDATE
+    $sql_ubah = "UPDATE tb_buku SET judul_buku = ?, pengarang = ?, penerbit = ?, th_terbit = ? WHERE id_buku = ?";
+    $stmt_ubah = $koneksi->prepare($sql_ubah);
+    $stmt_ubah->bind_param("sssss", $judul_buku, $pengarang, $penerbit, $th_terbit, $id_buku);
+    $query_ubah = $stmt_ubah->execute();
 
+    // Menampilkan pesan berdasarkan hasil
     if ($query_ubah) {
         echo "<script>
-        Swal.fire({title: 'Ubah Data Berhasil',text: '',icon: 'success',confirmButtonText: 'OK'
-        }).then((result) => {
-            if (result.value) {
-                window.location = 'index.php?page=MyApp/data_buku';
-            }
-        })</script>";
-        }else{
+            Swal.fire({
+                title: 'Ubah Data Berhasil',
+                text: '',
+                icon: 'success',
+                confirmButtonText: 'OK'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location = 'index.php?page=MyApp/data_buku';
+                }
+            });
+        </script>";
+    } else {
         echo "<script>
-        Swal.fire({title: 'Ubah Data Gagal',text: '',icon: 'error',confirmButtonText: 'OK'
-        }).then((result) => {
-            if (result.value) {
-                window.location = 'index.php?page=MyApp/data_buku';
-            }
-        })</script>";
+            Swal.fire({
+                title: 'Ubah Data Gagal',
+                text: '',
+                icon: 'error',
+                confirmButtonText: 'OK'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location = 'index.php?page=MyApp/data_buku';
+                }
+            });
+        </script>";
     }
-}
 
+    // Tutup statement
+    $stmt_ubah->close();
+}
+?>

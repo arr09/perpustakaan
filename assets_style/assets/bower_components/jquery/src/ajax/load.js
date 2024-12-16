@@ -53,23 +53,22 @@ define([
 
                 // Sanitize responseText before inserting it into the DOM
                 if (typeof DOMPurify !== "undefined") {
-                    responseText = DOMPurify.sanitize(responseText);
+                    // Clean the responseText using DOMPurify
+                    responseText = DOMPurify.sanitize(responseText, {
+                        SAFE_FOR_JQUERY: true // Ensures safe insertion into jQuery elements
+                    });
                 } else {
                     console.error("DOMPurify is not loaded. Please include it to sanitize HTML.");
                 }
 
+                // Insert sanitized content into the DOM
                 self.html(selector ?
-
                     // If a selector was specified, locate the right elements in a dummy div
                     // Exclude scripts to avoid IE 'Permission Denied' errors
                     jQuery("<div>").append(jQuery.parseHTML(responseText)).find(selector).html() :
-
                     // Otherwise use the full result
                     responseText);
 
-            // If the request succeeds, this function gets "data", "status", "jqXHR"
-            // but they are ignored because response was set above.
-            // If it fails, this function gets "jqXHR", "status", "error"
             }).always(callback && function (jqXHR, status) {
                 self.each(function () {
                     callback.apply(this, response || [jqXHR.responseText, status, jqXHR]);

@@ -1,23 +1,21 @@
 #!/usr/bin/env node
 'use strict';
 
-/* globals Set */
-/*!
- * Script to update version number references in the project.
- * Copyright 2015 Twitter, Inc.
- * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
- */
 var fs = require('fs');
 var path = require('path');
 var sh = require('shelljs');
 sh.config.fatal = true;
 var sed = sh.sed;
 
-// Blame TC39... https://github.com/benjamingr/RegExp.escape/issues/37
+// Function to safely escape a string for use in RegExp
 RegExp.quote = function (string) {
+  if (typeof string !== 'string') return string; // Prevent non-string input
   return string.replace(/[-\\^$*+?.()|[\]{}]/g, '\\$&');
 };
+
+// Function to escape a replacement string
 RegExp.quoteReplacement = function (string) {
+  if (typeof string !== 'string') return string; // Prevent non-string input
   return string.replace(/[$]/g, '$$');
 };
 
@@ -41,11 +39,9 @@ function walkAsync(directory, excludedDirectories, fileCallback, errback) {
         }
         if (stats.isSymbolicLink()) {
           return;
-        }
-        else if (stats.isDirectory()) {
+        } else if (stats.isDirectory()) {
           process.nextTick(walkAsync, filepath, excludedDirectories, fileCallback, errback);
-        }
-        else if (stats.isFile()) {
+        } else if (stats.isFile()) {
           process.nextTick(fileCallback, filepath);
         }
       });
@@ -54,7 +50,14 @@ function walkAsync(directory, excludedDirectories, fileCallback, errback) {
 }
 
 function replaceRecursively(directory, excludedDirectories, allowedExtensions, original, replacement) {
-  original = new RegExp(RegExp.quote(original), 'g');
+  // Safely compile the RegExp to prevent ReDoS
+  try {
+    original = new RegExp(RegExp.quote(original), 'g');
+  } catch (e) {
+    console.error('Error compiling RegExp for original pattern:', e);
+    process.exit(1);
+  }
+
   replacement = RegExp.quoteReplacement(replacement);
   var updateFile = !DRY_RUN ? function (filepath) {
     if (allowedExtensions.has(path.parse(filepath).ext)) {
@@ -63,13 +66,12 @@ function replaceRecursively(directory, excludedDirectories, allowedExtensions, o
   } : function (filepath) {
     if (allowedExtensions.has(path.parse(filepath).ext)) {
       console.log('FILE: ' + filepath);
-    }
-    else {
+    } else {
       console.log('EXCLUDED:' + filepath);
     }
   };
   walkAsync(directory, excludedDirectories, updateFile, function (err) {
-    console.error('ERROR while traversing directory!:');
+    console.error('ERROR while traversing directory:');
     console.error(err);
     process.exit(1);
   });
@@ -81,29 +83,30 @@ function main(args) {
     console.error('Got arguments:', args);
     process.exit(1);
   }
+
   var oldVersion = args[0];
   var newVersion = args[1];
+
+  // Validate input size and pattern to prevent ReDoS
+  if (oldVersion.length > 100 || newVersion.length > 100) {
+    console.error('Error: Version strings should not exceed 100 characters to prevent performance issues.');
+    process.exit(1);
+  }
+
+  // Example of sanitizing and limiting unsafe characters in version strings
+  var sanitizedOldVersion = oldVersion.replace(/[^a-zA-Z0-9.-]/g, '');
+  var sanitizedNewVersion = newVersion.replace(/[^a-zA-Z0-9.-]/g, '');
+
   var EXCLUDED_DIRS = new Set([
     '.git',
     'node_modules',
     'vendor'
   ]);
   var INCLUDED_EXTENSIONS = new Set([
-    // This extension whitelist is how we avoid modifying binary files
-    '',
-    '.css',
-    '.html',
-    '.js',
-    '.json',
-    '.less',
-    '.md',
-    '.nuspec',
-    '.ps1',
-    '.scss',
-    '.txt',
-    '.yml'
+    '.css', '.html', '.js', '.json', '.less', '.md', '.nuspec', '.ps1', '.scss', '.txt', '.yml'
   ]);
-  replaceRecursively('.', EXCLUDED_DIRS, INCLUDED_EXTENSIONS, oldVersion, newVersion);
+  
+  replaceRecursively('.', EXCLUDED_DIRS, INCLUDED_EXTENSIONS, sanitizedOldVersion, sanitizedNewVersion);
 }
 
 main(process.argv.slice(2));

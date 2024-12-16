@@ -102,7 +102,7 @@ if (isset ($_POST['Ubah'])){
     $sql_ubah = "UPDATE tb_pengguna SET
         nama_pengguna='".$_POST['nama_pengguna']."',
         username='".$_POST['username']."',
-        password='".md5($_POST['password'])."',
+        password='" . password_hash($_POST['password'], PASSWORD_BCRYPT) . "',
         level='".$_POST['level']."'
         WHERE id_pengguna='".$_POST['id_pengguna']."'";
     $query_ubah = mysqli_query($koneksi, $sql_ubah);

@@ -15,7 +15,6 @@
 <section class="content">
 	<div class="row">
 		<div class="col-md-12">
-			<!-- general form elements -->
 			<div class="box box-info">
 				<div class="box-header with-border">
 					<h3 class="box-title">Tambah Pengguna</h3>
@@ -28,36 +27,32 @@
 						</button>
 					</div>
 				</div>
-				<!-- /.box-header -->
-				<!-- form start -->
 				<form action="" method="post" enctype="multipart/form-data">
 					<div class="box-body">
 						<div class="form-group">
-							<label for="exampleInputEmail1">Nama Pengguna</label>
-							<input type="text" name="nama_pengguna" id="nama_pengguna" class="form-control" placeholder="Nama pengguna">
+							<label for="nama_pengguna">Nama Pengguna</label>
+							<input type="text" name="nama_pengguna" id="nama_pengguna" class="form-control" placeholder="Nama pengguna" required>
 						</div>
 
 						<div class="form-group">
-							<label for="exampleInputEmail1">Username</label>
-							<input type="text" name="username" id="username" class="form-control" placeholder="Username">
+							<label for="username">Username</label>
+							<input type="text" name="username" id="username" class="form-control" placeholder="Username" required>
 						</div>
 
 						<div class="form-group">
-							<label for="exampleInputPassword1">Password</label>
-							<input type="password" name="password" id="password" class="form-control" placeholder="Password">
+							<label for="password">Password</label>
+							<input type="password" name="password" id="password" class="form-control" placeholder="Password" required>
 						</div>
 
 						<div class="form-group">
-							<label>Level</label>
-							<select name="level" id="level" class="form-control">
-								<option>-- Pilih Level --</option>
-								<option>Administrator</option>
-								<option>Petugas</option>
+							<label for="level">Level</label>
+							<select name="level" id="level" class="form-control" required>
+								<option value="">-- Pilih Level --</option>
+								<option value="Administrator">Administrator</option>
+								<option value="Petugas">Petugas</option>
 							</select>
 						</div>
-
 					</div>
-					<!-- /.box-body -->
 
 					<div class="box-footer">
 						<input type="submit" name="Simpan" value="Simpan" class="btn btn-info">
@@ -65,34 +60,51 @@
 					</div>
 				</form>
 			</div>
-			<!-- /.box -->
+		</div>
 </section>
 
 <?php
+if (isset($_POST['Simpan'])) {
+    // Validasi input
+    $nama_pengguna = trim($_POST['nama_pengguna']);
+    $username = trim($_POST['username']);
+    $password = $_POST['password'];
+    $level = $_POST['level'];
 
-    if (isset ($_POST['Simpan'])){
-    //mulai proses simpan data
-        $sql_simpan = "INSERT INTO tb_pengguna (nama_pengguna,username,password,level) VALUES (
-        '".$_POST['nama_pengguna']."',
-        '".$_POST['username']."',
-        '".password_hash($_POST['password'], PASSWORD_BCRYPT)."',
-        '".$_POST['level']."')";
-        $query_simpan = mysqli_query($koneksi, $sql_simpan);
-    if ($query_simpan) {
-      echo "<script>
-      Swal.fire({title: 'Tambah Data Berhasil',text: '',icon: 'success',confirmButtonText: 'OK'
-      }).then((result) => {if (result.value){
-        window.location = 'index.php?page=MyApp/data_pengguna';
+    // Periksa apakah semua data telah diisi
+    if (empty($nama_pengguna) || empty($username) || empty($password) || empty($level)) {
+        echo "<script>
+        Swal.fire({title: 'Form Tidak Lengkap',text: 'Harap isi semua kolom.',icon: 'warning',confirmButtonText: 'OK'});
+        </script>";
+    } else {
+        // Hash password menggunakan BCRYPT
+        $hashed_password = password_hash($password, PASSWORD_BCRYPT);
+
+        // Gunakan prepared statement untuk menyimpan data
+        $stmt = $koneksi->prepare("INSERT INTO tb_pengguna (nama_pengguna, username, password, level) VALUES (?, ?, ?, ?)");
+        $stmt->bind_param("ssss", $nama_pengguna, $username, $hashed_password, $level);
+
+        // Eksekusi query
+        if ($stmt->execute()) {
+            echo "<script>
+            Swal.fire({title: 'Tambah Data Berhasil',text: '',icon: 'success',confirmButtonText: 'OK'
+            }).then((result) => {
+                if (result.value) {
+                    window.location = 'index.php?page=MyApp/data_pengguna';
+                }
+            })</script>";
+        } else {
+            echo "<script>
+            Swal.fire({title: 'Tambah Data Gagal',text: 'Terjadi kesalahan saat menyimpan data.',icon: 'error',confirmButtonText: 'OK'
+            }).then((result) => {
+                if (result.value) {
+                    window.location = 'index.php?page=MyApp/add_pengguna';
+                }
+            })</script>";
         }
-      })</script>";
-      }else{
-      echo "<script>
-      Swal.fire({title: 'Tambah Data Gagal',text: '',icon: 'error',confirmButtonText: 'OK'
-      }).then((result) => {if (result.value){
-        window.location = 'index.php?page=MyApp/add_pengguna';
-        }
-      })</script>";
+
+        // Tutup prepared statement
+        $stmt->close();
     }
-     //selesai proses simpan data
 }
-    
+?>
